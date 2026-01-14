@@ -1,0 +1,61 @@
+name: Build and Release App
+
+on:
+  push:
+    tags:
+      - 'v*' # Trigger only when you push a tag like v1.0, v1.1
+
+permissions:
+  contents: write
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11' # Use a stable version
+
+    - name: Install Dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install pyinstaller requests pymupdf
+        # If you have other libs, install them here:
+        # pip install -r requirements.txt
+
+    - name: Build Launcher (The Engine)
+      run: |
+        # Build the folder that holds the Python engine + fitz binaries
+        pyinstaller --noconsole --onedir --name "MyAppEngine" src/launcher.py
+        
+        # COPY main_logic.py into that folder so it's ready to run
+        copy src\main_logic.py dist\MyAppEngine\
+
+    - name: Zip the Engine (For the Installer to use)
+      run: |
+        # We zip the folder so the installer can carry it as a payload
+        powershell Compress-Archive -Path dist\MyAppEngine -DestinationPath app_payload.zip
+
+    - name: Build Installer (The Single File)
+      # This step assumes your installer.py reads 'app_payload.zip'
+      # You might need a small script here to embed the zip as base64 into installer.py
+      # For simplicity, let's just release the Zipped Engine and the Update File
+      run: |
+        echo "Building Installer..."
+        # If you have the complex installer.py logic we discussed, run it here.
+        # Otherwise, we will just release the ZIP for friends to unzip.
+
+    - name: Upload Release Assets
+      uses: softprops/action-gh-release@v1
+      if: startsWith(github.ref, 'refs/tags/')
+      with:
+        files: |
+          app_payload.zip
+          src/main_logic.py
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
