@@ -1,14 +1,14 @@
 import tkinter as tk
-# Notice we can just import other files from the same folder!
-import gui
-import pdf_ops 
+import gui  # We can import this because they are in the same folder
 
-def run_app():
+def start_app():
+    # 1. Setup the main window
     root = tk.Tk()
-    root.title("PDF OneStop")
-    root.geometry("400x300")
-    
-    # Pass the 'root' to the GUI module to draw buttons
-    gui.setup_ui(root)
-    
+    root.title("My Demo App")
+    root.geometry("400x250")
+
+    # 2. Hand over control to the GUI module
+    gui.build_interface(root)
+
+    # 3. Start the loop
     root.mainloop()

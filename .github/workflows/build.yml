@@ -1,9 +1,9 @@
-name: Build and Release App
+name: Build Hello World Demo
 
 on:
   push:
     tags:
-      - 'v*' # Trigger only when you push a tag like v1.0, v1.1
+      - 'v*' # Triggers only when you tag a version (e.g., v1.0)
 
 permissions:
   contents: write
@@ -19,43 +19,45 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
-        python-version: '3.11' # Use a stable version
+        python-version: '3.11' 
 
     - name: Install Dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install pyinstaller requests pymupdf
-        # If you have other libs, install them here:
-        # pip install -r requirements.txt
+        pip install pyinstaller
+        pip install -r requirements.txt
 
-    - name: Build Launcher (The Engine)
+    - name: Build the Launcher (Engine)
       run: |
-        # Build the folder that holds the Python engine + fitz binaries
-        pyinstaller --noconsole --onedir --name "MyAppEngine" src/launcher.py
+        # Build launcher.py into a single executable file
+        # --distpath . means "put the .exe right here in the root" (simplifies zipping)
+        pyinstaller --noconsole --onefile --name "MyAppLauncher" --distpath . launcher.py
+
+    - name: Organize Files for Release
+      run: |
+        # Create a clean folder for the final app
+        mkdir FinalApp
         
-        # COPY main_logic.py into that folder so it's ready to run
-        copy src\main_logic.py dist\MyAppEngine\
+        # Move the new .exe into it
+        move MyAppLauncher.exe FinalApp/
+        
+        # Copy the 'app_source' folder into it (so the launcher can find the logic)
+        xcopy app_source FinalApp\app_source\ /E /I
 
-    - name: Zip the Engine (For the Installer to use)
+    - name: Create Downloadable Zips
       run: |
-        # We zip the folder so the installer can carry it as a payload
-        powershell Compress-Archive -Path dist\MyAppEngine -DestinationPath app_payload.zip
+        # 1. Zip the Full App (Launcher + Source) for new users
+        powershell Compress-Archive -Path FinalApp/* -DestinationPath PDF_OneStop_App.zip
+        
+        # 2. Zip just the Source (for future updates)
+        powershell Compress-Archive -Path app_source/* -DestinationPath update.zip
 
-    - name: Build Installer (The Single File)
-      # This step assumes your installer.py reads 'app_payload.zip'
-      # You might need a small script here to embed the zip as base64 into installer.py
-      # For simplicity, let's just release the Zipped Engine and the Update File
-      run: |
-        echo "Building Installer..."
-        # If you have the complex installer.py logic we discussed, run it here.
-        # Otherwise, we will just release the ZIP for friends to unzip.
-
-    - name: Upload Release Assets
+    - name: Upload to GitHub Release
       uses: softprops/action-gh-release@v1
       if: startsWith(github.ref, 'refs/tags/')
       with:
         files: |
-          app_payload.zip
-          src/main_logic.py
+          PDF_OneStop_App.zip
+          update.zip
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

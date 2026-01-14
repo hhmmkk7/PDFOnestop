@@ -1,28 +1,30 @@
 import sys
 import os
 
-def start():
-    # 1. Find the path to the 'app_source' folder
+def start_engine():
+    # 1. Determine the root path (works for both .exe and script)
     if getattr(sys, 'frozen', False):
-        # If running as compiled .exe
         base_path = os.path.dirname(sys.executable)
     else:
-        # If running as script in VS Code
         base_path = os.path.dirname(os.path.abspath(__file__))
-        
-    source_path = os.path.join(base_path, 'app_source')
+    
+    # 2. Find the source code folder
+    source_dir = os.path.join(base_path, 'app_source')
 
-    # 2. Add it to Python's "search path" so we can import files from it
-    if source_path not in sys.path:
-        sys.path.insert(0, source_path)
+    # 3. Add to Python path so we can import from it
+    if source_dir not in sys.path:
+        sys.path.insert(0, source_dir)
 
-    # 3. Import 'main' from that folder and run it
+    # 4. Launch the App
     try:
-        import main 
-        main.run_app()
+        import main
+        main.start_app()
     except ImportError as e:
-        print(f"Error: Could not find app logic. {e}")
-        input("Press Enter to exit...") # Keep window open to see error
+        import tkinter.messagebox
+        tkinter.messagebox.showerror("Critical Error", f"Could not load app_source.\n{e}")
+    except Exception as e:
+        import tkinter.messagebox
+        tkinter.messagebox.showerror("Crash", f"An unexpected error occurred:\n{e}")
 
 if __name__ == "__main__":
-    start()
+    start_engine()
